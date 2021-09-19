@@ -19,6 +19,7 @@ package google.cloud.dialogflow.cx.v3;
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 import "google/api/resource.proto";
+import "google/cloud/dialogflow/cx/v3/advanced_settings.proto";
 import "google/cloud/dialogflow/cx/v3/audio_config.proto";
 import "google/cloud/dialogflow/cx/v3/flow.proto";
 import "google/cloud/dialogflow/cx/v3/intent.proto";
@@ -38,6 +39,7 @@ option java_multiple_files = true;
 option java_outer_classname = "SessionProto";
 option java_package = "com.google.cloud.dialogflow.cx.v3";
 option objc_class_prefix = "DF";
+option ruby_package = "Google::Cloud::Dialogflow::CX::V3";
 option (google.api.resource_definition) = {
   type: "dialogflow.googleapis.com/Session"
   pattern: "projects/{project}/locations/{location}/agents/{agent}/sessions/{session}"
@@ -147,6 +149,20 @@ message DetectIntentRequest {
 
 // The message returned from the DetectIntent method.
 message DetectIntentResponse {
+  // Represents different DetectIntentResponse types.
+  enum ResponseType {
+    // Not specified. This should never happen.
+    RESPONSE_TYPE_UNSPECIFIED = 0;
+
+    // Partial response. e.g. Aggregated responses in a Fulfillment that enables
+    // `return_partial_response` can be returned as partial response.
+    // WARNING: partial response is not eligible for barge-in.
+    PARTIAL = 1;
+
+    // Final response.
+    FINAL = 2;
+  }
+
   // Output only. The unique identifier of the response. It can be used to
   // locate a response in the training example set or for reporting issues.
   string response_id = 1;
@@ -169,6 +185,14 @@ message DetectIntentResponse {
 
   // The config used by the speech synthesizer to generate the output audio.
   OutputAudioConfig output_audio_config = 5;
+
+  // Response type.
+  ResponseType response_type = 6;
+
+  // Indicates whether the partial response can be cancelled when a later
+  // response arrives. e.g. if the agent specified some music as partial
+  // response, it can be cancelled.
+  bool allow_cancellation = 7;
 }
 
 // The top-level message sent by the client to the
@@ -229,6 +253,12 @@ message StreamingDetectIntentRequest {
 
   // Instructs the speech synthesizer how to generate the output audio.
   OutputAudioConfig output_audio_config = 4;
+
+  // Enable partial detect intent response. If this flag is not enabled,
+  // response stream still contains only one final `DetectIntentResponse` even
+  // if some `Fulfillment`s in the agent have been configured to return partial
+  // responses.
+  bool enable_partial_response = 5;
 }
 
 // The top-level message returned from the `StreamingDetectIntent` method.
@@ -350,6 +380,9 @@ message StreamingRecognitionResult {
   // beginning of the audio. Only populated for `message_type` =
   // `TRANSCRIPT`.
   google.protobuf.Duration speech_end_offset = 8;
+
+  // Detected language code for the transcript.
+  string language_code = 10;
 }
 
 // Represents the parameters of a conversational query.
@@ -408,8 +441,9 @@ message QueryParameters {
   google.protobuf.Struct parameters = 5;
 
   // The unique identifier of the [page][google.cloud.dialogflow.cx.v3.Page] to override the [current
-  // page][QueryResult.current_page] in the session. Format: `projects/<Project
-  // ID>/locations/<Location ID>/agents/<Agent ID>/pages/<page ID>`.
+  // page][QueryResult.current_page] in the session.
+  // Format: `projects/<Project ID>/locations/<Location ID>/agents/<Agent
+  // ID>/flows/<Flow ID>/pages/<Page ID>`.
   //
   // If `current_page` is specified, the previous state of the session will be
   // ignored by Dialogflow, including the [previous
@@ -438,6 +472,18 @@ message QueryParameters {
   // "Content-Length", "Connection", "From", "User-Agent", "Accept-Encoding",
   // "If-Modified-Since", "If-None-Match", "X-Forwarded-For", etc.
   map<string, string> webhook_headers = 10;
+
+  // A list of flow versions to override for the request.
+  // Format: `projects/<Project ID>/locations/<Location ID>/agents/<Agent
+  // ID>/flows/<Flow ID>/versions/<Version ID>`.
+  //
+  // If version 1 of flow X is included in this list, the traffic of
+  // flow X will go through version 1 regardless of the version configuration in
+  // the environment. Each flow can have at most one version specified in this
+  // list.
+  repeated string flow_versions = 14 [(google.api.resource_reference) = {
+                                        type: "dialogflow.googleapis.com/Version"
+                                      }];
 }
 
 // Represents the query input. It can contain one of:
